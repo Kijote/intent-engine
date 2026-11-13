@@ -14,7 +14,7 @@ pre{overflow:auto;background:#0b1220;padding:14px;border-radius:8px;font-size:13
 .item{margin:12px 0}.item small{float:right}.muted{color:#aebbd0;font-size:13px}
 strong{color:#b9ddff}label{display:block;margin:12px 0 6px}
 </style></head><body><main>
-<header><h1>Intent Engine · Playground</h1><p>Clasificador ultraliviano ES / EN / PT · 100 % en tu navegador · Sin API</p></header>
+<header><h1>Intent Engine · Playground</h1><p>Modelo original TF-IDF + regresión logística ES / EN / PT · Inferencia local sin API</p></header>
 <section><label for="query">Consulta</label><textarea id="query">Quiero vacaciones del 12 al 16 de enero</textarea>
 <div class="actions" id="examples"></div>
 <div class="actions"><button id="run">Interpretar consulta</button><button id="test">Evaluar ejemplos</button><button id="clear">Limpiar</button></div>
@@ -22,5 +22,5 @@ strong{color:#b9ddff}label{display:block;margin:12px 0 6px}
 <div class="grid"><section><h2>Predicción</h2><div id="scores"></div></section>
 <section><h2>Salida estructurada</h2><pre id="json" aria-live="polite">{}</pre></section></div>
 <section><h2>Evaluación</h2><p class="muted">Pruebas de humo con frases distintas de las usadas para entrenar. No es una medición estadística de precisión.</p><pre id="evaluation">Ejecutá «Evaluar ejemplos».</pre></section>
-<section><h2>Alcance</h2><p>Este playground usa un clasificador Naive Bayes de n-gramas de caracteres entrenado en memoria con un corpus pequeño. <strong>No es todavía el modelo TF-IDF + regresión logística de la PoC anterior.</strong> Sirve para experimentar dentro de GitHub sin compilación ni servicios.</p><p>Los valores son puntuaciones del modelo, no probabilidades calibradas. Ninguna acción se ejecuta automáticamente.</p></section>
+<section><h2>Alcance</h2><p>Este playground usa un clasificador TF-IDF + regresión logística de n-gramas de caracteres entrenado en memoria con un corpus pequeño. <strong>No es todavía el modelo TF-IDF + regresión logística de la PoC anterior.</strong> Sirve para experimentar dentro de GitHub sin compilación ni servicios.</p><p>Los valores son puntuaciones del modelo, no probabilidades calibradas. Ninguna acción se ejecuta automáticamente.</p></section>
 </main><script type="module" src="./playground.js"></script></body></html>
