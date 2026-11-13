@@ -14,13 +14,52 @@ const samples=["Quiero vacaciones del 12 al 16 de enero","¿Cuántos días de va
 const evaluation=[["quiero pedir mis vacaciones para febrero","vacation_request"],["me quedan dias disponibles de licencia","vacation_balance"],["necesito retirarme antes del trabajo","permission_request"],["hoy no asisto porque estoy enfermo","absence_report"],["mi solicitud ya fue aceptada?","request_status"],["autorizar el permiso de ana","request_approval"],["armame un formulario de compras","form_creation"],["mostrar las ausencias del equipo","calendar_query"],["necesito un anticipo de sueldo","advance_request"],["tell me a joke",null]];
 const normalize=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
 function grams(s){const t=" "+normalize(s)+" ";const a=[];for(let n=2;n<=4;n++)for(let i=0;i<=t.length-n;i++)a.push(t.slice(i,i+n));return a}
-function train(data){const classes=Object.keys(data),docs={},counts={},totals={},vocab=new Set();let totalDocs=0;for(const c of classes){docs[c]=data[c].length;totalDocs+=docs[c];counts[c]=new Map();totals[c]=0;for(const s of data[c])for(const g of grams(s)){vocab.add(g);counts[c].set(g,(counts[c].get(g)||0)+1);totals[c]++}}return {classes,docs,counts,totals,V:vocab.size,totalDocs}}
+// TF-IDF de caracteres + regresión logística multinomial entrenada en JS.
+// El corpus es una demostración pequeña; los scores NO están calibrados.
+function train(data){
+  const classes=Object.keys(data),documents=[],labels=[],df=new Map();
+  for(let k=0;k<classes.length;k++)for(const sentence of data[classes[k]]){
+    const unique=new Set(grams(sentence));documents.push(sentence);labels.push(k);
+    for(const gram of unique)df.set(gram,(df.get(gram)||0)+1);
+  }
+  const vocabulary=new Map([...df].filter(([,count])=>count>=2).map(([g],i)=>[g,i]));
+  const idf=new Float64Array(vocabulary.size);
+  for(const [g,i] of vocabulary)idf[i]=Math.log((1+documents.length)/(1+df.get(g)))+1;
+  function vectorize(text){
+    const counts=new Map();
+    for(const gram of grams(text)){const i=vocabulary.get(gram);if(i!==undefined)counts.set(i,(counts.get(i)||0)+1)}
+    const vector=[];let norm=0;
+    for(const [i,count] of counts){const value=(1+Math.log(count))*idf[i];vector.push([i,value]);norm+=value*value}
+    const scale=Math.sqrt(norm)||1;return vector.map(([i,v])=>[i,v/scale]);
+  }
+  const vectors=documents.map(vectorize),weights=classes.map(()=>new Float64Array(vocabulary.size)),bias=new Float64Array(classes.length);
+  // Batch SGD determinista, L2 ligera. No utiliza servicios externos.
+  const epochs=160,learningRate=0.35,regularization=0.0005;
+  for(let epoch=0;epoch<epochs;epoch++){
+    const lr=learningRate/(1+epoch*0.015);
+    for(let d=0;d<vectors.length;d++){
+      const x=vectors[d],logits=classes.map((_,k)=>bias[k]+x.reduce((sum,[i,v])=>sum+weights[k][i]*v,0));
+      const m=Math.max(...logits),exps=logits.map(z=>Math.exp(z-m)),den=exps.reduce((p,q)=>p+q,0);
+      for(let k=0;k<classes.length;k++){
+        const delta=(k===labels[d]?1:0)-exps[k]/den;
+        bias[k]+=lr*delta;
+        for(const [i,v] of x)weights[k][i]+=lr*(delta*v-regularization*weights[k][i]);
+      }
+    }
+  }
+  return {classes,documents:documents.length,vocabulary,idf,weights,bias,vectorize};
+}
 const model=train(corpus);
-function predict(s){const gs=grams(s);const logits=model.classes.map(c=>{let x=Math.log(model.docs[c]/model.totalDocs);for(const g of gs)x+=Math.log(((model.counts[c].get(g)||0)+1)/(model.totals[c]+model.V));return x});const max=Math.max(...logits),exp=logits.map(x=>Math.exp(x-max)),sum=exp.reduce((a,b)=>a+b,0);return model.classes.map((action,i)=>({action,score:exp[i]/sum})).sort((a,b)=>b.score-a.score)}
+function predict(s){
+  const x=model.vectorize(s);
+  const logits=model.classes.map((action,k)=>model.bias[k]+x.reduce((sum,[i,v])=>sum+model.weights[k][i]*v,0));
+  const max=Math.max(...logits),exp=logits.map(z=>Math.exp(z-max)),total=exp.reduce((a,b)=>a+b,0);
+  return model.classes.map((action,i)=>({action,score:exp[i]/total})).sort((a,b)=>b.score-a.score);
+}
 function entities(text){const out={};const s=normalize(text);const range=s.match(/(?:del|from|de)\s+(\d{1,2})\s+(?:al|to|a)\s+(\d{1,2})\s+(?:de|of)?\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december)/);if(range){out.start_day=Number(range[1]);out.end_day=Number(range[2]);out.month=range[3]}else{const month=s.match(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|january|february|march|april|may|june|july|august|september|october|november|december)\b/);if(month)out.month=month[1]}const year=s.match(/\b20\d{2}\b/);if(year)out.year=Number(year[0]);return out}
 const $=id=>document.getElementById(id);
-function interpret(){const text=$("query").value.trim();if(!text){$("status").textContent="Escribí una consulta.";return}const start=performance.now(),rank=predict(text),ms=(performance.now()-start).toFixed(2);const top=rank[0],margin=top.score-rank[1].score;const accepted=top.score>=0.55&&margin>=0.15;const result={action:accepted?top.action:"needs_clarification",candidate:top.action,score:Number(top.score.toFixed(3)),entities:entities(text),requires_confirmation:accepted&&["vacation_request","permission_request","absence_report","request_approval","form_creation","advance_request"].includes(top.action),model:"char-ngram-naive-bayes-demo"};$("status").textContent=(accepted?labels[top.action]:"Pedir aclaración")+" · "+ms+" ms";$("json").textContent=JSON.stringify(result,null,2);$("scores").replaceChildren(...rank.slice(0,6).map(r=>{const item=document.createElement("div");item.className="item";const line=document.createElement("div");const name=document.createElement("span");name.textContent=labels[r.action];const val=document.createElement("small");val.textContent=(r.score*100).toFixed(1)+"%";line.append(name,val);const bar=document.createElement("div");bar.className="bar";const fill=document.createElement("div");fill.style.width=(r.score*100)+"%";bar.append(fill);item.append(line,bar);return item}))}
+function interpret(){const text=$("query").value.trim();if(!text){$("status").textContent="Escribí una consulta.";return}const start=performance.now(),rank=predict(text),ms=(performance.now()-start).toFixed(2);const top=rank[0],margin=top.score-rank[1].score;const accepted=top.score>=0.55&&margin>=0.15;const result={action:accepted?top.action:"needs_clarification",candidate:top.action,score:Number(top.score.toFixed(3)),entities:entities(text),requires_confirmation:accepted&&["vacation_request","permission_request","absence_report","request_approval","form_creation","advance_request"].includes(top.action),model:"char-tfidf-logistic-regression-js"};$("status").textContent=(accepted?labels[top.action]:"Pedir aclaración")+" · "+ms+" ms";$("json").textContent=JSON.stringify(result,null,2);$("scores").replaceChildren(...rank.slice(0,6).map(r=>{const item=document.createElement("div");item.className="item";const line=document.createElement("div");const name=document.createElement("span");name.textContent=labels[r.action];const val=document.createElement("small");val.textContent=(r.score*100).toFixed(1)+"%";line.append(name,val);const bar=document.createElement("div");bar.className="bar";const fill=document.createElement("div");fill.style.width=(r.score*100)+"%";bar.append(fill);item.append(line,bar);return item}))}
 $("examples").replaceChildren(...samples.map(s=>{const b=document.createElement("button");b.textContent=s;b.addEventListener("click",()=>{$("query").value=s;interpret()});return b}));
 $("run").addEventListener("click",interpret);$("clear").addEventListener("click",()=>{$("query").value="";$("scores").replaceChildren();$("json").textContent="{}";$("status").textContent="Consulta vacía"});
 $("test").addEventListener("click",()=>{let correct=0;const lines=evaluation.map(([text,expected])=>{const r=predict(text),got=r[0].score>=.55&&r[0].score-r[1].score>=.15?r[0].action:null;const ok=got===expected;if(ok)correct++;return (ok?"✓":"✗")+" "+text+"\n  esperado: "+(expected||"rechazo")+" | obtenido: "+(got||"rechazo")});$("evaluation").textContent=correct+"/"+evaluation.length+" coincidencias en ejemplos de humo\n\n"+lines.join("\n\n")});
-$("status").textContent="Modelo de demostración listo · "+model.totalDocs+" frases de entrenamiento · "+model.classes.length+" categorías";interpret();
+$("status").textContent="Modelo de demostración listo · "+model.documents+" frases de entrenamiento · "+model.classes.length+" categorías";interpret();
