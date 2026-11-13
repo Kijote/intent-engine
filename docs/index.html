@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Intent Engine · Playground</title><style>
+:root{font:16px system-ui,sans-serif;color-scheme:dark;background:#0d1422;color:#e8eef9}
+*{box-sizing:border-box}body{margin:0;padding:24px}main{max-width:1050px;margin:auto}
+h1{margin-bottom:4px}p{color:#aebbd0}section{background:#172236;border:1px solid #30415a;border-radius:14px;padding:20px;margin:18px 0}
+textarea{width:100%;min-height:92px;background:#0d1422;border:1px solid #435875;border-radius:8px;color:inherit;padding:12px;font:inherit}
+button,select{border:1px solid #486182;border-radius:8px;background:#253b59;color:inherit;padding:10px;cursor:pointer;font:inherit}
+button:hover{background:#345579}button:focus-visible,textarea:focus-visible{outline:2px solid #7cb5ff}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}body{padding:12px}}
+pre{overflow:auto;background:#0b1220;padding:14px;border-radius:8px;font-size:13px}
+.bar{height:10px;background:#31425b;border-radius:8px;overflow:hidden}.bar>div{height:100%;background:#6da9ff}
+.item{margin:12px 0}.item small{float:right}.muted{color:#aebbd0;font-size:13px}
+strong{color:#b9ddff}label{display:block;margin:12px 0 6px}
+</style></head><body><main>
+<header><h1>Intent Engine · Playground</h1><p>Clasificador ultraliviano ES / EN / PT · 100 % en tu navegador · Sin API</p></header>
+<section><label for="query">Consulta</label><textarea id="query">Quiero vacaciones del 12 al 16 de enero</textarea>
+<div class="actions" id="examples"></div>
+<div class="actions"><button id="run">Interpretar consulta</button><button id="test">Evaluar ejemplos</button><button id="clear">Limpiar</button></div>
+<p id="status" role="status" aria-live="polite">Entrenando modelo de demostración...</p></section>
+<div class="grid"><section><h2>Predicción</h2><div id="scores"></div></section>
+<section><h2>Salida estructurada</h2><pre id="json" aria-live="polite">{}</pre></section></div>
+<section><h2>Evaluación</h2><p class="muted">Pruebas de humo con frases distintas de las usadas para entrenar. No es una medición estadística de precisión.</p><pre id="evaluation">Ejecutá «Evaluar ejemplos».</pre></section>
+<section><h2>Alcance</h2><p>Este playground usa un clasificador Naive Bayes de n-gramas de caracteres entrenado en memoria con un corpus pequeño. <strong>No es todavía el modelo TF-IDF + regresión logística de la PoC anterior.</strong> Sirve para experimentar dentro de GitHub sin compilación ni servicios.</p><p>Los valores son puntuaciones del modelo, no probabilidades calibradas. Ninguna acción se ejecuta automáticamente.</p></section>
+</main><script type="module" src="./playground.js"></script></body></html>
