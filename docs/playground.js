@@ -21,7 +21,57 @@ const evaluation=[
 ["armame un formulario de compras","create_form"],
 ["mostrar las ausencias del equipo","calendar_query"],
 ["tell me a joke","unknown"],
-["contame un chiste","unknown"]
+["contame un chiste","unknown"],
+["necesito vacaciones para la primera semana de marzo","vacation_request"],
+["quisiera tomar cinco dias de descanso","vacation_request"],
+["puedo solicitar vacaciones en julio","vacation_request"],
+["i need annual leave next month","vacation_request"],
+["quero marcar férias para janeiro","vacation_request"],
+["cuantos dias libres me corresponden","vacation_balance"],
+["quiero saber mi saldo de licencia","vacation_balance"],
+["consultar dias de vacaciones pendientes","vacation_balance"],
+["how much annual leave do I have left","vacation_balance"],
+["quantos dias de férias ainda tenho","vacation_balance"],
+["tengo que salir dos horas antes mañana","permission_request"],
+["necesito permiso para ir al medico","permission_request"],
+["puedo ausentarme el viernes por la mañana","permission_request"],
+["may I leave early for an appointment","permission_request"],
+["preciso de permissão para sair mais cedo","permission_request"],
+["no voy a poder asistir hoy","absence_report"],
+["quiero avisar que falto por enfermedad","absence_report"],
+["mañana no iré a trabajar por fiebre","absence_report"],
+["I am calling in sick today","absence_report"],
+["não poderei comparecer ao trabalho amanhã","absence_report"],
+["como va mi solicitud de licencia","request_status"],
+["quiero consultar el estado de mi pedido","request_status"],
+["todavia esta pendiente mi solicitud","request_status"],
+["has my leave request been approved","request_status"],
+["qual é o status do meu pedido","request_status"],
+["apruebo las vacaciones de maria","approve_request"],
+["necesito rechazar una solicitud pendiente","approve_request"],
+["autorizar licencia de un empleado","approve_request"],
+["approve the pending time off request","approve_request"],
+["aprovar o pedido de férias do funcionário","approve_request"],
+["quiero crear un formulario de licencias","create_form"],
+["armar un formulario para solicitudes internas","create_form"],
+["necesitamos un nuevo formulario de permisos","create_form"],
+["create a new employee request form","create_form"],
+["criar formulário para pedidos internos","create_form"],
+["mostrame el calendario de licencias","calendar_query"],
+["quienes faltan la semana que viene","calendar_query"],
+["ver ausencias del equipo en diciembre","calendar_query"],
+["show the team leave calendar","calendar_query"],
+["quem está de férias na próxima semana","calendar_query"],
+["contame una historia de piratas","unknown"],
+["cuanto es siete por ocho","unknown"],
+["que tiempo hace en buenos aires","unknown"],
+["recomendame una pelicula","unknown"],
+["como se cocina arroz","unknown"],
+["tell me a funny story","unknown"],
+["what is the capital of Canada","unknown"],
+["play some music","unknown"],
+["qual é a previsão do tempo","unknown"],
+["me conte uma piada","unknown"]
 ];
 const normalize=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
 function grams(s){const t=" "+normalize(s)+" ";const a=[];for(let n=2;n<=4;n++)for(let i=0;i<=t.length-n;i++)a.push(t.slice(i,i+n));return a}
@@ -49,13 +99,13 @@ $("examples").replaceChildren(...samples.map(s=>{const b=document.createElement(
 $("run").addEventListener("click",interpret);$("clear").addEventListener("click",()=>{$("query").value="";$("scores").replaceChildren();$("json").textContent="{}";$("status").textContent="Consulta vacía"});
 $("test").addEventListener("click",()=>{
   if(!model){$("evaluation").textContent="Falta docs/model.json";return;}
-  let correct=0,unknownCorrect=0;
+  let correct=0,unknownCorrect=0,unknownTotal=0;
   const lines=evaluation.map(([text,expected])=>{
     const rank=predict(text),candidate=rank[0].action,score=rank[0].score;
     const ok=candidate===expected;if(ok)correct++;
-    if(expected==="unknown"&&ok)unknownCorrect++;
+    if(expected==="unknown"){unknownTotal++;if(ok)unknownCorrect++;}
     return (ok?"✓":"✗")+" "+text+"\n  esperado: "+expected+" | candidato: "+candidate+" ("+(score*100).toFixed(1)+"%)";
   });
-  $("evaluation").textContent="Clasificación top-1: "+correct+"/"+evaluation.length+" coincidencias\nRechazos fuera de dominio: "+unknownCorrect+"/2\n\nEste test mide candidatos, no decisiones automáticas ni precisión estadística. El filtro de dominio y los umbrales se evalúan por separado.\n\n"+lines.join("\n\n");
+  $("evaluation").textContent="Clasificación top-1: "+correct+"/"+evaluation.length+" coincidencias\nRechazos fuera de dominio: "+unknownCorrect+"/"+unknownTotal\n\nEste test mide candidatos, no decisiones automáticas ni precisión estadística. El filtro de dominio y los umbrales se evalúan por separado.\n\n"+lines.join("\n\n");
 });
 $("status").textContent="Cargando pesos originales…";fetch("./model.json").then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.json()}).then(data=>{if(!Array.isArray(data.classes)||!Array.isArray(data.weights)||!data.vocabulary||!Array.isArray(data.idf))throw Error("Formato de modelo inválido");model=data;$("status").textContent="Modelo original listo · "+model.classes.length+" categorías";interpret()}).catch(error=>{$("status").textContent="No se pudo cargar docs/model.json: "+error.message;$("json").textContent=JSON.stringify({error:"missing_model",detail:"Subir los pesos originales a docs/model.json"},null,2)});
