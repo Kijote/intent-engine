@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "promotion": {
+    "min_accuracy": 0.95,
+    "max_critical_regressions": 0,
+    "require_non_regression": true,
+    "auto_merge": false,
+    "auto_publish": false
+  },
+  "agent": {
+    "issue_label": "training-test",
+    "variants_per_issue": 10
+  },
+  "evaluation": {
+    "min_holdout_examples": 100,
+    "require_all_classes": true
+  },
+  "compatibility": {
+    "max_model_bytes": 1048576
+  }
+}
