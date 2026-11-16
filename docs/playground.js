@@ -106,6 +106,6 @@ $("test").addEventListener("click",()=>{
     if(expected==="unknown"){unknownTotal++;if(ok)unknownCorrect++;}
     return (ok?"✓":"✗")+" "+text+"\n  esperado: "+expected+" | candidato: "+candidate+" ("+(score*100).toFixed(1)+"%)";
   });
-  $("evaluation").textContent="Clasificación top-1: "+correct+"/"+evaluation.length+" coincidencias\nRechazos fuera de dominio: "+unknownCorrect+"/"+unknownTotal\n\nEste test mide candidatos, no decisiones automáticas ni precisión estadística. El filtro de dominio y los umbrales se evalúan por separado.\n\n"+lines.join("\n\n");
+  $("evaluation").textContent=["Clasificación top-1: "+correct+"/"+evaluation.length+" coincidencias","Rechazos fuera de dominio: "+unknownCorrect+"/"+unknownTotal,"","Este test mide candidatos, no decisiones automáticas ni precisión estadística. El filtro de dominio y los umbrales se evalúan por separado.","",lines.join("\n\n")].join("\n");
 });
 $("status").textContent="Cargando pesos originales…";fetch("./model.json").then(r=>{if(!r.ok)throw Error("HTTP "+r.status);return r.json()}).then(data=>{if(!Array.isArray(data.classes)||!Array.isArray(data.weights)||!data.vocabulary||!Array.isArray(data.idf))throw Error("Formato de modelo inválido");model=data;$("status").textContent="Modelo original listo · "+model.classes.length+" categorías";interpret()}).catch(error=>{$("status").textContent="No se pudo cargar docs/model.json: "+error.message;$("json").textContent=JSON.stringify({error:"missing_model",detail:"Subir los pesos originales a docs/model.json"},null,2)});
